@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Aces & Babes — Couples ELO Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#0a0a0a;color:#f0ece3;font-family:'DM Sans',sans-serif;overflow-x:hidden;}
+  .playfair{font-family:'Playfair Display',Georgia,serif;}
+
+  /* GRAIN */
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.03;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+  /* NAV */
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:20px 48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(10,10,10,.95),transparent);backdrop-filter:blur(10px);border-bottom:1px solid rgba(212,175,55,.08);}
+  .logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;}
+  .logo span{color:#d4af37;}
+  .nav-links{display:flex;gap:36px;}
+  .nav-links a{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(240,236,227,.6);text-decoration:none;transition:color .2s;}
+  .nav-links a:hover{color:#d4af37;}
+
+  /* HERO */
+  .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(212,175,55,.07),transparent 70%);position:relative;}
+  .hero-label{font-size:11px;letter-spacing:4px;text-transform:uppercase;color:#d4af37;margin-bottom:24px;animation:up .8s ease forwards;}
+  .hero h1{font-family:'Playfair Display',serif;font-size:clamp(52px,8vw,96px);font-weight:900;line-height:1.05;animation:up .8s ease .1s both;}
+  .hero h1.gold{color:#d4af37;font-style:italic;animation:up .8s ease .2s both;}
+  .hero p{font-size:18px;color:rgba(240,236,227,.6);max-width:520px;line-height:1.7;margin:32px auto 48px;animation:up .8s ease .3s both;}
+  .email-row{display:flex;max-width:480px;margin:0 auto;animation:up .8s ease .4s both;}
+  .email-row input{flex:1;padding:16px 24px;background:rgba(240,236,227,.05);border:1px solid rgba(212,175,55,.3);color:#f0ece3;font-size:15px;outline:none;transition:border-color .2s;font-family:'DM Sans',sans-serif;}
+  .email-row input:focus{border-color:#d4af37;}
+  .email-row input::placeholder{color:rgba(240,236,227,.3);}
+  .gold-btn{padding:16px 32px;background:linear-gradient(135deg,#d4af37,#f4d03f,#d4af37);color:#0a0a0a;border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:transform .2s;white-space:nowrap;}
+  .gold-btn:hover{transform:translateY(-2px);}
+  .hero-note{font-size:12px;color:rgba(240,236,227,.3);margin-top:12px;letter-spacing:.5px;}
+  .scroll-line{width:1px;height:60px;background:linear-gradient(180deg,#d4af37,transparent);margin:60px auto 0;}
+
+  /* TICKER */
+  .ticker{background:#d4af37;padding:12px 0;overflow:hidden;}
+  .ticker-inner{display:flex;gap:60px;animation:ticker 30s linear infinite;width:max-content;}
+  .ticker-inner span{font-size:13px;font-weight:500;color:#0a0a0a;letter-spacing:2px;text-transform:uppercase;white-space:nowrap;}
+
+  /* STATS */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);max-width:1000px;margin:0 auto;padding:100px 48px;text-align:center;}
+  .stat-num{font-family:'Playfair Display',serif;font-size:52px;font-weight:900;background:linear-gradient(135deg,#d4af37,#f4d03f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .stat-label{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:rgba(240,236,227,.4);margin-top:8px;}
+
+  /* SECTIONS */
+  .section{padding:80px 48px;max-width:1100px;margin:0 auto;}
+  .section-center{text-align:center;margin-bottom:56px;}
+  .section-tag{font-size:11px;letter-spacing:4px;text-transform:uppercase;color:#d4af37;margin-bottom:16px;}
+  .section-title{font-family:'Playfair Display',serif;font-size:clamp(36px,5vw,56px);font-weight:700;}
+  .divider{width:60px;height:2px;background:linear-gradient(90deg,#d4af37,transparent);margin:20px 0;}
+
+  /* HOW IT WORKS */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;}
+  .step{padding:40px 32px;border:1px solid rgba(212,175,55,.15);background:rgba(255,255,255,.02);position:relative;overflow:hidden;}
+  .step-num{font-family:'Playfair Display',serif;font-size:72px;font-weight:900;color:rgba(212,175,55,.1);position:absolute;top:20px;right:24px;line-height:1;}
+  .step h3{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;margin-bottom:16px;}
+  .step p{font-size:15px;line-height:1.7;color:rgba(240,236,227,.6);}
+
+  /* CATEGORIES */
+  .cats-bg{background:rgba(255,255,255,.015);border-top:1px solid rgba(212,175,55,.08);border-bottom:1px solid rgba(212,175,55,.08);padding:80px 48px;}
+  .cats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;max-width:1100px;margin:0 auto;}
+  .cat-card{padding:24px 16px;text-align:center;border:1px solid rgba(212,175,55,.1);background:rgba(255,255,255,.02);transition:all .3s;cursor:pointer;}
+  .cat-card:hover{border-color:rgba(212,175,55,.6);background:rgba(212,175,55,.05);transform:translateY(-4px);}
+  .cat-icon{font-size:32px;margin-bottom:10px;}
+  .cat-name{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;margin-bottom:4px;}
+  .cat-desc{font-size:12px;color:rgba(240,236,227,.4);}
+
+  /* LEADERBOARD */
+  .lb{border:1px solid rgba(212,175,55,.2);max-width:900px;margin:0 auto;}
+  .lb-header{display:grid;grid-template-columns:60px 1fr 120px 80px;padding:14px 24px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(240,236,227,.35);border-bottom:1px solid rgba(212,175,55,.1);}
+  .lb-row{display:grid;grid-template-columns:60px 1fr 120px 80px;padding:20px 24px;align-items:center;border-bottom:1px solid rgba(212,175,55,.06);transition:background .2s;cursor:pointer;}
+  .lb-row:last-child{border-bottom:none;}
+  .lb-row:hover{background:rgba(212,175,55,.05);}
+  .lb-rank{font-family:'Playfair Display',serif;font-size:20px;font-weight:900;}
+  .lb-couple{font-family:'Playfair Display',serif;font-size:17px;font-weight:600;}
+  .lb-elo{text-align:center;font-size:18px;font-weight:500;color:#d4af37;}
+  .lb-wins{text-align:center;font-size:14px;color:rgba(240,236,227,.5);}
+  .lb-note{text-align:center;margin-top:24px;font-size:13px;color:rgba(240,236,227,.3);letter-spacing:1px;}
+
+  /* TESTIMONIALS */
+  .testi-bg{background:rgba(212,175,55,.03);border-top:1px solid rgba(212,175,55,.08);padding:80px 48px;}
+  .testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;max-width:1100px;margin:0 auto;}
+  .testi-card{padding:36px 32px;border:1px solid rgba(212,175,55,.12);background:rgba(255,255,255,.02);}
+  .testi-quote-mark{font-family:'Playfair Display',serif;font-size:72px;color:rgba(212,175,55,.15);line-height:.8;margin-bottom:16px;font-style:italic;}
+  .testi-text{font-family:'Playfair Display',serif;font-size:17px;font-style:italic;line-height:1.6;color:rgba(240,236,227,.85);margin-bottom:24px;}
+  .testi-name{font-size:14px;font-weight:500;}
+  .testi-meta{font-size:12px;color:rgba(240,236,227,.4);margin-top:4px;}
+
+  /* FINAL CTA */
+  .cta-section{padding:120px 48px;text-align:center;background:radial-gradient(ellipse 70% 50% at 50% 50%,rgba(212,175,55,.08),transparent 70%);}
+  .cta-section h2{font-family:'Playfair Display',serif;font-size:clamp(40px,6vw,72px);font-weight:900;line-height:1.1;max-width:700px;margin:24px auto 48px;}
+
+  /* FOOTER */
+  footer{padding:40px 48px;border-top:1px solid rgba(212,175,55,.1);display:flex;justify-content:space-between;align-items:center;}
+  .footer-links{display:flex;gap:24px;}
+  .footer-links a{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:rgba(240,236,227,.3);text-decoration:none;transition:color .2s;}
+  .footer-links a:hover{color:#d4af37;}
+
+  /* SUCCESS */
+  .success{padding:20px 32px;border:1px solid #d4af37;background:rgba(212,175,55,.08);color:#d4af37;font-size:15px;max-width:480px;margin:0 auto;}
+
+  /* ANIMATIONS */
+  @keyframes up{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes ticker{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+
+  @media(max-width:768px){
+    nav{padding:16px 20px;}
+    .nav-links{display:none;}
+    .stats{grid-template-columns:1fr;padding:60px 24px;}
+    .steps{grid-template-columns:1fr;}
+    .cats-grid{grid-template-columns:repeat(2,1fr);}
+    .testi-grid{grid-template-columns:1fr;}
+    .section{padding:60px 24px;}
+    footer{flex-direction:column;gap:20px;text-align:center;}
+    .email-row{flex-direction:column;}
+    .gold-btn{width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo playfair">Aces <span>&</span> Babes</div>
+  <div class="nav-links">
+    <a href="#leaderboard">Leaderboard</a>
+    <a href="#games">Games</a>
+    <a href="#how">How It Works</a>
+    <a href="#signup">Sign Up</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-label">The World's First Couples ELO Platform</div>
+  <h1 class="playfair">Play Together.</h1>
+  <h1 class="playfair gold">Rank Together.</h1>
+  <p>Compete across tennis, bowling, board games, golf & more. Track your ELO rating as a couple. Climb the global leaderboard.</p>
+  <div class="email-row" id="signup">
+    <input type="email" id="emailInput" placeholder="your@email.com" />
+    <button class="gold-btn" onclick="handleSignup()">Join Waitlist</button>
+  </div>
+  <p class="hero-note">Free forever. No credit card. Launch coming soon.</p>
+  <div class="scroll-line"></div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-inner">
+    <span>🎾 Tennis ·</span><span>♟️ Chess ·</span><span>🎳 Bowling ·</span><span>🏓 Ping Pong ·</span><span>🃏 Cards ·</span><span>⛳ Golf ·</span><span>🎯 Darts ·</span><span>🏐 Pickleball ·</span><span>🧩 Board Games ·</span><span>🎮 Video Games ·</span>
+    <span>🎾 Tennis ·</span><span>♟️ Chess ·</span><span>🎳 Bowling ·</span><span>🏓 Ping Pong ·</span><span>🃏 Cards ·</span><span>⛳ Golf ·</span><span>🎯 Darts ·</span><span>🏐 Pickleball ·</span><span>🧩 Board Games ·</span><span>🎮 Video Games ·</span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div><div class="stat-num" data-target="12847">0</div><div class="stat-label">Couples Competing</div></div>
+  <div><div class="stat-num" data-target="84392">0</div><div class="stat-label">Matches Logged</div></div>
+  <div><div class="stat-num" data-target="10">0</div><div class="stat-label">Game Categories</div></div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <div class="section-center">
+    <div class="section-tag">How It Works</div>
+    <h2 class="section-title playfair">Three steps to glory</h2>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="divider"></div>
+      <h3>Create Your Couple</h3>
+      <p>Each partner signs up individually, then links accounts to form your team. Your couple gets a unified profile and starting ELO of 1200.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="divider"></div>
+      <h3>Log Your Matches</h3>
+      <p>Play any game in our categories. Log the result — both couples must confirm before ELO updates. No disputed results, ever.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="divider"></div>
+      <h3>Climb the Ranks</h3>
+      <p>Beat higher-ranked couples to gain more ELO. Defend your position. See where you stand globally, by city, and by game category.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<div class="cats-bg" id="games">
+  <div class="section-center" style="max-width:1100px;margin:0 auto 56px;">
+    <div class="section-tag">Game Categories</div>
+    <h2 class="section-title playfair">Your arena awaits</h2>
+  </div>
+  <div class="cats-grid">
+    <div class="cat-card"><div class="cat-icon">🎾</div><div class="cat-name">Tennis Doubles</div><div class="cat-desc">Serve & volley together</div></div>
+    <div class="cat-card"><div class="cat-icon">🎳</div><div class="cat-name">Bowling</div><div class="cat-desc">Strike as one</div></div>
+    <div class="cat-card"><div class="cat-icon">♟️</div><div class="cat-name">Chess</div><div class="cat-desc">Think two moves ahead</div></div>
+    <div class="cat-card"><div class="cat-icon">🏓</div><div class="cat-name">Ping Pong</div><div class="cat-desc">Rally your way up</div></div>
+    <div class="cat-card"><div class="cat-icon">🃏</div><div class="cat-name">Card Games</div><div class="cat-desc">Bluff, bid & win</div></div>
+    <div class="cat-card"><div class="cat-icon">🎯</div><div class="cat-name">Darts</div><div class="cat-desc">Bullseye together</div></div>
+    <div class="cat-card"><div class="cat-icon">⛳</div><div class="cat-name">Golf</div><div class="cat-desc">Play the long game</div></div>
+    <div class="cat-card"><div class="cat-icon">🧩</div><div class="cat-name">Board Games</div><div class="cat-desc">Strategy + chemistry</div></div>
+    <div class="cat-card"><div class="cat-icon">🏐</div><div class="cat-name">Pickleball</div><div class="cat-desc">The fastest growing rivalry</div></div>
+    <div class="cat-card"><div class="cat-icon">🎮</div><div class="cat-name">Video Games</div><div class="cat-desc">Co-op or 1v1</div></div>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<section class="section" id="leaderboard">
+  <div class="section-center">
+    <div class="section-tag">Global Leaderboard</div>
+    <h2 class="section-title playfair">Who's on top?</h2>
+  </div>
+  <div class="lb">
+    <div class="lb-header"><span>Rank</span><span>Couple</span><span style="text-align:center">ELO</span><span style="text-align:center">Wins</span></div>
+    <div class="lb-row"><span class="lb-rank" style="color:#d4af37">1</span><span class="lb-couple">Jordan & Maya</span><span class="lb-elo">2,341</span><span class="lb-wins">47W 🔥</span></div>
+    <div class="lb-row"><span class="lb-rank" style="color:rgba(212,175,55,.7)">2</span><span class="lb-couple">Chris & Priya</span><span class="lb-elo">2,289</span><span class="lb-wins">41W ⚡</span></div>
+    <div class="lb-row"><span class="lb-rank" style="color:rgba(212,175,55,.5)">3</span><span class="lb-couple">Sam & Alex</span><span class="lb-elo">2,201</span><span class="lb-wins">38W 🎯</span></div>
+    <div class="lb-row"><span class="lb-rank" style="color:rgba(240,236,227,.3)">4</span><span class="lb-couple">Tyler & Zoe</span><span class="lb-elo">2,154</span><span class="lb-wins">33W</span></div>
+    <div class="lb-row"><span class="lb-rank" style="color:rgba(240,236,227,.3)">5</span><span class="lb-couple">Marcus & Lily</span><span class="lb-elo">2,098</span><span class="lb-wins">29W</span></div>
+  </div>
+  <p class="lb-note">Preview data · Full leaderboard unlocks at launch</p>
+</section>
+
+<!-- TESTIMONIALS -->
+<div class="testi-bg">
+  <div class="section-center" style="max-width:1100px;margin:0 auto 56px;">
+    <div class="section-tag">Early Players</div>
+    <h2 class="section-title playfair">From the <em>court</em> to the <em>couch</em></h2>
+  </div>
+  <div class="testi-grid">
+    <div class="testi-card">
+      <div class="testi-quote-mark">"</div>
+      <p class="testi-text">We've never been more competitive — or more in love.</p>
+      <div class="divider"></div>
+      <div class="testi-name">Devon & Serena</div>
+      <div class="testi-meta">Pickleball · ELO 1,847</div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-quote-mark">"</div>
+      <p class="testi-text">Finally, a way to prove I'm the brains of this operation.</p>
+      <div class="divider"></div>
+      <div class="testi-name">Raj & Nina</div>
+      <div class="testi-meta">Chess · ELO 2,012</div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-quote-mark">"</div>
+      <p class="testi-text">We went from date nights to championship nights.</p>
+      <div class="divider"></div>
+      <div class="testi-name">Jake & Cleo</div>
+      <div class="testi-meta">Bowling · ELO 1,923</div>
+    </div>
+  </div>
+</div>
+
+<!-- FINAL CTA -->
+<div class="cta-section">
+  <div class="section-tag">Ready to compete?</div>
+  <h2 class="playfair">Find out if you two are actually the best couple.</h2>
+  <div id="ctaSignup">
+    <div class="email-row" style="max-width:480px;margin:0 auto;">
+      <input type="email" id="emailInput2" placeholder="your@email.com" />
+      <button class="gold-btn" onclick="handleSignup2()">Join Waitlist</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="logo playfair">Aces <span>&</span> Babes</div>
+  <div style="font-size:12px;color:rgba(240,236,227,.25);letter-spacing:1px;">acesandbabes.com · © 2026 · Free forever</div>
+  <div class="footer-links">
+    <a href="#">Privacy</a>
+    <a href="#">Terms</a>
+    <a href="#">Contact</a>
+  </div>
+</footer>
+
+<script>
+  // Waitlist signup
+  function handleSignup() {
+    const email = document.getElementById('emailInput').value;
+    if (email.includes('@')) {
+      document.getElementById('signup').innerHTML = '<div class="success">✓ You\'re on the list — we\'ll be in touch, champion.</div>';
+    }
+  }
+  function handleSignup2() {
+    const email = document.getElementById('emailInput2').value;
+    if (email.includes('@')) {
+      document.getElementById('ctaSignup').innerHTML = '<div class="success">✓ You\'re on the list — we\'ll be in touch, champion.</div>';
+    }
+  }
+
+  // Animated counters
+  function animateCounter(el) {
+    const target = parseInt(el.dataset.target);
+    const duration = 2000;
+    const start = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.floor(ease * target).toLocaleString();
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { animateCounter(e.target); observer.unobserve(e.target); }});
+  });
+  document.querySelectorAll('.stat-num').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
