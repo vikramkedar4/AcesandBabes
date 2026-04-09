@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Log In — Aces & Babes</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#0a0a0a;color:#f0ece3;font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  .card{position:relative;z-index:1;width:100%;max-width:440px;border:1px solid rgba(212,175,55,.2);background:rgba(255,255,255,.02);padding:48px 40px;}
+  .logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;text-align:center;margin-bottom:8px;}
+  .logo span{color:#d4af37;}
+  .tagline{text-align:center;font-size:13px;color:rgba(240,236,227,.4);letter-spacing:1px;margin-bottom:40px;}
+  .divider{width:40px;height:2px;background:linear-gradient(90deg,#d4af37,transparent);margin:0 auto 40px;}
+  .field{margin-bottom:20px;}
+  .field label{display:block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(240,236,227,.5);margin-bottom:8px;}
+  .field input{width:100%;padding:14px 16px;background:rgba(240,236,227,.05);border:1px solid rgba(212,175,55,.2);color:#f0ece3;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:border-color .2s;}
+  .field input:focus{border-color:#d4af37;}
+  .field input::placeholder{color:rgba(240,236,227,.25);}
+  .submit-btn{width:100%;padding:16px;background:linear-gradient(135deg,#d4af37,#f4d03f,#d4af37);color:#0a0a0a;border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-top:8px;transition:opacity .2s;}
+  .submit-btn:hover{opacity:.9;}
+  .submit-btn:disabled{opacity:.5;cursor:not-allowed;}
+  .error{background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.3);color:#ff8080;padding:12px 16px;font-size:14px;margin-bottom:20px;display:none;}
+  .success{background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3);color:#d4af37;padding:12px 16px;font-size:14px;margin-bottom:20px;display:none;}
+  .footer-link{text-align:center;margin-top:24px;font-size:14px;color:rgba(240,236,227,.4);}
+  .footer-link a{color:#d4af37;text-decoration:none;}
+  .back{display:block;text-align:center;margin-bottom:32px;font-size:13px;color:rgba(240,236,227,.4);text-decoration:none;letter-spacing:1px;}
+  .back:hover{color:#d4af37;}
+  .glow{position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:300px;height:300px;background:radial-gradient(circle,rgba(212,175,55,.06),transparent 70%);pointer-events:none;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="glow"></div>
+  <a href="/" class="back">← Back to home</a>
+  <div class="logo">Aces <span>&</span> Babes</div>
+  <p class="tagline">Welcome back</p>
+  <div class="divider"></div>
+
+  <div class="error" id="errorMsg"></div>
+  <div class="success" id="successMsg"></div>
+
+  <div class="field">
+    <label>Email</label>
+    <input type="email" id="email" placeholder="you@email.com"/>
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="your password"/>
+  </div>
+
+  <button class="submit-btn" id="loginBtn" onclick="handleLogin()">
+    Enter the Arena
+  </button>
+
+  <div class="footer-link">
+    No account yet? <a href="/signup.html">Sign up free</a>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://xtjlgzpnkcsuiqinzxvk.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_WcvK0hilPOQ9_ThWxXuyi-A_8zt3h5XD';
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // If already logged in, redirect to dashboard
+  db.auth.getSession().then(({ data }) => {
+    if (data.session) window.location.href = '/dashboard.html';
+  });
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.style.display = 'block';
+    document.getElementById('successMsg').style.display = 'none';
+  }
+
+  function showSuccess(msg) {
+    const el = document.getElementById('successMsg');
+    el.textContent = msg;
+    el.style.display = 'block';
+    document.getElementById('errorMsg').style.display = 'none';
+  }
+
+  async function handleLogin() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('loginBtn');
+
+    if (!email || !password) return showError('Please enter your email and password.');
+
+    btn.disabled = true;
+    btn.textContent = 'Logging in...';
+
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      btn.disabled = false;
+      btn.textContent = 'Enter the Arena';
+      return showError('Invalid email or password. Please try again.');
+    }
+
+    showSuccess('Welcome back! Redirecting...');
+    setTimeout(() => { window.location.href = '/dashboard.html'; }, 1000);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleLogin();
+  });
+</script>
+</body>
+</html>
