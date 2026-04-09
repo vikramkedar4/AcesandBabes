@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard — Aces & Babes</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#0a0a0a;color:#f0ece3;font-family:'DM Sans',sans-serif;min-height:100vh;}
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,10,10,.95);border-bottom:1px solid rgba(212,175,55,.1);backdrop-filter:blur(10px);}
+  .logo{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;}
+  .logo span{color:#d4af37;}
+  .nav-right{display:flex;align-items:center;gap:24px;}
+  .username-badge{font-size:13px;color:rgba(240,236,227,.5);letter-spacing:1px;}
+  .logout-btn{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(240,236,227,.4);background:none;border:1px solid rgba(212,175,55,.2);padding:8px 16px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+  .logout-btn:hover{border-color:#d4af37;color:#d4af37;}
+  .main{padding:100px 40px 60px;max-width:1100px;margin:0 auto;}
+  .welcome{margin-bottom:48px;}
+  .welcome-tag{font-size:11px;letter-spacing:4px;text-transform:uppercase;color:#d4af37;margin-bottom:12px;}
+  .welcome h1{font-family:'Playfair Display',serif;font-size:clamp(32px,5vw,52px);font-weight:900;}
+  .welcome h1 em{color:#d4af37;font-style:italic;}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:48px;}
+  .stat-card{border:1px solid rgba(212,175,55,.15);background:rgba(255,255,255,.02);padding:28px 24px;}
+  .stat-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(240,236,227,.4);margin-bottom:12px;}
+  .stat-val{font-family:'Playfair Display',serif;font-size:40px;font-weight:900;background:linear-gradient(135deg,#d4af37,#f4d03f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .stat-sub{font-size:13px;color:rgba(240,236,227,.35);margin-top:6px;}
+  .section-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;margin-bottom:20px;}
+  .divider{width:40px;height:2px;background:linear-gradient(90deg,#d4af37,transparent);margin-bottom:24px;}
+
+  /* Couple Card */
+  .couple-card{border:1px solid rgba(212,175,55,.2);background:rgba(255,255,255,.02);padding:32px;margin-bottom:32px;}
+  .couple-name{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;margin-bottom:8px;}
+  .couple-elo{font-size:14px;color:rgba(240,236,227,.5);}
+  .couple-elo span{color:#d4af37;font-size:20px;font-weight:700;}
+  .invite-section{margin-top:24px;padding-top:24px;border-top:1px solid rgba(212,175,55,.1);}
+  .invite-label{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:rgba(240,236,227,.4);margin-bottom:12px;}
+  .invite-row{display:flex;gap:0;}
+  .invite-input{flex:1;padding:12px 16px;background:rgba(240,236,227,.05);border:1px solid rgba(212,175,55,.2);color:#f0ece3;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;}
+  .invite-input:focus{border-color:#d4af37;}
+  .invite-input::placeholder{color:rgba(240,236,227,.25);}
+  .gold-btn{padding:12px 24px;background:linear-gradient(135deg,#d4af37,#f4d03f);color:#0a0a0a;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;white-space:nowrap;}
+  .gold-btn:hover{opacity:.9;}
+  .gold-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+  /* Log Match */
+  .match-form{border:1px solid rgba(212,175,55,.15);background:rgba(255,255,255,.02);padding:32px;margin-bottom:32px;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  .field label{display:block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(240,236,227,.5);margin-bottom:8px;}
+  .field select,.field input{width:100%;padding:12px 16px;background:rgba(240,236,227,.05);border:1px solid rgba(212,175,55,.2);color:#f0ece3;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;}
+  .field select:focus,.field input:focus{border-color:#d4af37;}
+  .field select option{background:#1a1a1a;}
+
+  /* Recent Matches */
+  .matches-list{border:1px solid rgba(212,175,55,.15);}
+  .match-row{display:grid;grid-template-columns:1fr auto auto;gap:16px;padding:16px 24px;align-items:center;border-bottom:1px solid rgba(212,175,55,.06);}
+  .match-row:last-child{border-bottom:none;}
+  .match-game{font-size:14px;font-weight:500;}
+  .match-result{font-size:12px;letter-spacing:1px;text-transform:uppercase;}
+  .win{color:#4caf50;}
+  .loss{color:#f44336;}
+  .pending{color:#d4af37;}
+  .match-date{font-size:12px;color:rgba(240,236,227,.3);}
+  .empty-state{padding:40px;text-align:center;color:rgba(240,236,227,.3);font-size:14px;}
+
+  .msg{padding:12px 16px;font-size:14px;margin-bottom:16px;display:none;}
+  .msg.error{background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.3);color:#ff8080;}
+  .msg.success{background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3);color:#d4af37;}
+
+  @media(max-width:768px){
+    .grid{grid-template-columns:1fr;}
+    .form-row{grid-template-columns:1fr;}
+    nav{padding:16px 20px;}
+    .main{padding:80px 20px 40px;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Aces <span>&</span> Babes</div>
+  <div class="nav-right">
+    <span class="username-badge" id="navUsername">Loading...</span>
+    <button class="logout-btn" onclick="handleLogout()">Log Out</button>
+  </div>
+</nav>
+
+<div class="main">
+
+  <!-- Welcome -->
+  <div class="welcome">
+    <div class="welcome-tag">Your Dashboard</div>
+    <h1 id="welcomeMsg">Welcome back, <em>champion</em></h1>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid">
+    <div class="stat-card">
+      <div class="stat-label">Overall ELO</div>
+      <div class="stat-val" id="statElo">1200</div>
+      <div class="stat-sub">Starting rating</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Wins</div>
+      <div class="stat-val" id="statWins">0</div>
+      <div class="stat-sub">Confirmed matches</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Global Rank</div>
+      <div class="stat-val" id="statRank">—</div>
+      <div class="stat-sub">Across all couples</div>
+    </div>
+  </div>
+
+  <!-- Couple Section -->
+  <div class="section-title">Your Couple</div>
+  <div class="divider"></div>
+  <div class="couple-card" id="coupleSection">
+    <div id="coupleContent">
+      <p style="color:rgba(240,236,227,.4);font-size:15px;">You haven't linked with a partner yet.</p>
+      <div class="invite-section">
+        <div class="invite-label">Invite your partner by username</div>
+        <div class="msg error" id="inviteError"></div>
+        <div class="msg success" id="inviteSuccess"></div>
+        <div class="invite-row">
+          <input class="invite-input" type="text" id="partnerUsername" placeholder="their_username"/>
+          <button class="gold-btn" onclick="sendInvite()">Link Up</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Log a Match -->
+  <div class="section-title">Log a Match</div>
+  <div class="divider"></div>
+  <div class="match-form">
+    <div class="msg error" id="matchError"></div>
+    <div class="msg success" id="matchSuccess"></div>
+    <div class="form-row">
+      <div class="field">
+        <label>Game Category</label>
+        <select id="matchCategory">
+          <option value="">Select a game...</option>
+          <option>Tennis Doubles</option>
+          <option>Bowling</option>
+          <option>Chess</option>
+          <option>Ping Pong</option>
+          <option>Card Games</option>
+          <option>Darts</option>
+          <option>Golf</option>
+          <option>Board Games</option>
+          <option>Pickleball</option>
+          <option>Video Games</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Opponent Couple Username</label>
+        <input type="text" id="opponentUsername" placeholder="their_username"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Result</label>
+        <select id="matchResult">
+          <option value="win">We Won 🏆</option>
+          <option value="loss">We Lost</option>
+        </select>
+      </div>
+    </div>
+    <button class="gold-btn" onclick="logMatch()" style="width:100%;padding:14px;">Submit Match (Awaits Confirmation)</button>
+  </div>
+
+  <!-- Recent Matches -->
+  <div class="section-title">Recent Matches</div>
+  <div class="divider"></div>
+  <div class="matches-list" id="matchesList">
+    <div class="empty-state">No matches logged yet. Play something and log your first match!</div>
+  </div>
+
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://xtjlgzpnkcsuiqinzxvk.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_WcvK0hilPOQ9_ThWxXuyi-A_8zt3h5XD';
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let currentUser = null;
+  let currentProfile = null;
+  let currentCouple = null;
+
+  async function init() {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) { window.location.href = '/login.html'; return; }
+    currentUser = session.user;
+
+    // Load profile
+    const { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+    if (profile) {
+      currentProfile = profile;
+      document.getElementById('navUsername').textContent = '@' + profile.username;
+      document.getElementById('welcomeMsg').innerHTML = `Welcome back, <em>${profile.username}</em>`;
+    }
+
+    // Load couple
+    const { data: couple } = await db.from('couples')
+      .select('*')
+      .or(`player1_id.eq.${currentUser.id},player2_id.eq.${currentUser.id}`)
+      .single();
+
+    if (couple) {
+      currentCouple = couple;
+      document.getElementById('statElo').textContent = couple.elo || 1200;
+      document.getElementById('coupleContent').innerHTML = `
+        <div class="couple-name">${couple.couple_name || 'Your Couple'}</div>
+        <div class="couple-elo">ELO Rating: <span>${couple.elo || 1200}</span></div>
+      `;
+    }
+
+    loadMatches();
+  }
+
+  async function sendInvite() {
+    const username = document.getElementById('partnerUsername').value.trim().toLowerCase();
+    if (!username) return;
+    if (username === currentProfile.username) {
+      showMsg('inviteError', "You can't link with yourself!");
+      return;
+    }
+
+    const { data: partner } = await db.from('profiles').select('*').eq('username', username).single();
+    if (!partner) { showMsg('inviteError', 'Username not found. Ask your partner to sign up first.'); return; }
+
+    // Create couple
+    const coupleName = currentProfile.username + ' & ' + partner.username;
+    const { error } = await db.from('couples').insert({
+      player1_id: currentUser.id,
+      player2_id: partner.id,
+      couple_name: coupleName,
+      elo: 1200,
+    });
+
+    if (error) { showMsg('inviteError', 'Could not link. You may already be in a couple.'); return; }
+    showMsg('inviteSuccess', `Linked with ${partner.username}! You are now ${coupleName} 🎉`);
+    setTimeout(() => location.reload(), 2000);
+  }
+
+  async function logMatch() {
+    const category = document.getElementById('matchCategory').value;
+    const opponentUsername = document.getElementById('opponentUsername').value.trim().toLowerCase();
+    const result = document.getElementById('matchResult').value;
+
+    if (!category) return showMsg('matchError', 'Please select a game category.');
+    if (!opponentUsername) return showMsg('matchError', 'Please enter the opponent couple username.');
+    if (!currentCouple) return showMsg('matchError', 'You need to link with a partner first.');
+
+    // Find opponent couple
+    const { data: opponentProfile } = await db.from('profiles').select('id').eq('username', opponentUsername).single();
+    if (!opponentProfile) return showMsg('matchError', 'Opponent username not found.');
+
+    const { data: opponentCouple } = await db.from('couples')
+      .select('*')
+      .or(`player1_id.eq.${opponentProfile.id},player2_id.eq.${opponentProfile.id}`)
+      .single();
+    if (!opponentCouple) return showMsg('matchError', 'Opponent has not linked with a partner yet.');
+
+    const winnerId = result === 'win' ? currentCouple.id : opponentCouple.id;
+    const loserId = result === 'win' ? opponentCouple.id : currentCouple.id;
+
+    const { error } = await db.from('matches').insert({
+      winner_couple_id: winnerId,
+      loser_couple_id: loserId,
+      category,
+      confirmed: false,
+      submitted_by: currentUser.id,
+    });
+
+    if (error) return showMsg('matchError', 'Failed to log match. Please try again.');
+    showMsg('matchSuccess', `Match logged! Waiting for ${opponentUsername} to confirm. ELO updates after confirmation.`);
+    loadMatches();
+  }
+
+  async function loadMatches() {
+    if (!currentCouple) return;
+    const { data: matches } = await db.from('matches')
+      .select('*')
+      .or(`winner_couple_id.eq.${currentCouple.id},loser_couple_id.eq.${currentCouple.id}`)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    const list = document.getElementById('matchesList');
+    if (!matches || matches.length === 0) {
+      list.innerHTML = '<div class="empty-state">No matches logged yet. Play something and log your first match!</div>';
+      return;
+    }
+
+    list.innerHTML = matches.map(m => {
+      const isWin = m.winner_couple_id === currentCouple.id;
+      const resultClass = m.confirmed ? (isWin ? 'win' : 'loss') : 'pending';
+      const resultText = m.confirmed ? (isWin ? 'WIN' : 'LOSS') : 'PENDING CONFIRM';
+      const date = new Date(m.created_at).toLocaleDateString();
+      return `
+        <div class="match-row">
+          <div class="match-game">${m.category}</div>
+          <div class="match-result ${resultClass}">${resultText}</div>
+          <div class="match-date">${date}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function showMsg(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 5000);
+  }
+
+  async function handleLogout() {
+    await db.auth.signOut();
+    window.location.href = '/';
+  }
+
+  init();
+</script>
+</body>
+</html>
