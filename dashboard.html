@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard — Aces & Babes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/styles.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/app.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="logo" href="index.html">Aces <span>&</span> Babes</a>
+  <div class="nav-links">
+    <a href="index.html#leaderboard">Leaderboard</a>
+    <span class="user-chip" id="navUser"></span>
+    <button class="btn btn-ghost btn-sm" id="logoutBtn" type="button">Log out</button>
+  </div>
+</nav>
+
+<main class="dash">
+  <div id="pageMsg" class="msg hidden" role="alert"></div>
+
+  <div class="dash-head">
+    <div class="eyebrow">Your dashboard</div>
+    <h1>Welcome back<span id="welcomeName"></span></h1>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="stat-label">Couple ELO</div>
+      <div class="stat-value" id="statElo">—</div>
+      <div class="stat-sub" id="statEloSub">Link up to start at 1,200</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Record</div>
+      <div class="stat-value" id="statRecord">—</div>
+      <div class="stat-sub" id="statRecordSub">Confirmed matches</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Global rank</div>
+      <div class="stat-value" id="statRank">—</div>
+      <div class="stat-sub" id="statRankSub">Across all couples</div>
+    </div>
+  </div>
+
+  <div class="dash-grid">
+    <section class="card" id="coupleCard" aria-live="polite">
+      <div class="card-title"><h2>Your couple</h2></div>
+      <div class="empty">Loading…</div>
+    </section>
+
+    <section class="card" id="logCard">
+      <div class="card-title"><h2>Log a match</h2><span class="hint">The other couple confirms before ELO moves</span></div>
+      <div id="logBody"><div class="empty">Loading…</div></div>
+    </section>
+
+    <section class="card span-2 hidden" id="pendingCard" aria-live="polite">
+      <div class="card-title"><h2>Needs your confirmation<span class="badge-count" id="pendingCount">0</span></h2><span class="hint">Results the other couple logged against you</span></div>
+      <div id="pendingMsg" class="msg hidden"></div>
+      <div id="pendingBody"></div>
+    </section>
+
+    <section class="card span-2" id="historyCard">
+      <div class="card-title"><h2>Match history</h2><span class="hint" id="historyHint"></span></div>
+      <div id="historyBody"><div class="empty">Loading…</div></div>
+    </section>
+  </div>
+</main>
+
+<script>
+(async function () {
+  if (!window.AB) {
+    document.getElementById('pageMsg').className = 'msg msg-error';
+    document.getElementById('pageMsg').textContent = 'Could not load the app library. Check your connection and reload.';
+    return;
+  }
+
+  var db = AB.db, esc = AB.esc, $ = AB.$;
+  var session, uid, profile, couple, partner, matches, couplesById, board;
+
+  AB.$('logoutBtn').addEventListener('click', AB.signOut);
+
+  /* ---------------- loading ---------------- */
+
+  function fatal(error) {
+    AB.showMsg('pageMsg', AB.friendlyError(error), 'error', true);
+    ['coupleCard', 'logBody', 'historyBody'].forEach(function (id) {
+      var el = $(id); if (el) el.querySelectorAll('.empty').forEach(function (e) { e.textContent = 'Unavailable'; });
+    });
+  }
+
+  async function ensureProfile() {
+    var r = await db.from('profiles').select('*').eq('id', uid).maybeSingle();
+    if (r.error) throw r.error;
+    if (r.data) return r.data;
+
+    // No profile row (trigger not installed, or an older account). Create one.
+    var meta = session.user.user_metadata || {};
+    var base = String(meta.username || (session.user.email || '').split('@')[0] || '')
+      .toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20);
+    var suffix = uid.replace(/-/g, '').slice(0, 4);
+    if (base.length < 3) base = 'player' + suffix;
+
+    var ins = await db.from('profiles').insert({ id: uid, username: base, full_name: base }).select().maybeSingle();
+    if (!ins.error && ins.data) return ins.data;
+    var ins2 = await db.from('profiles').insert({ id: uid, username: base + '_' + suffix, full_name: base }).select().maybeSingle();
+    if (ins2.error) throw ins2.error;
+    return ins2.data;
+  }
+
+  async function loadAll() {
+    session = await AB.requireAuth();
+    if (!session) return;
+    uid = session.user.id;
+
+    try {
+      profile = await ensureProfile();
+    } catch (err) { return fatal(err); }
+
+    $('navUser').textContent = '@' + profile.username;
+    $('welcomeName').innerHTML = ', <em>@' + esc(profile.username) + '</em>';
+
+    var cr = await db.from('couples').select('*')
+      .or('player1_id.eq.' + uid + ',player2_id.eq.' + uid)
+      .in('status', ['pending', 'active'])
+      .order('created_at', { ascending: false })
+      .limit(1).maybeSingle();
+    if (cr.error) return fatal(cr.error);
+    couple = cr.data || null;
+    partner = null;
+
+    if (couple) {
+      var pid = couple.player1_id === uid ? couple.player2_id : couple.player1_id;
+      try { partner = (await AB.loadProfiles([pid]))[pid] || null; } catch (err) { return fatal(err); }
+    }
+
+    matches = []; couplesById = {}; board = [];
+    try {
+      var jobs = [AB.loadLeaderboard()];
+      if (couple && couple.status === 'active') {
+        jobs.push(db.from('matches').select('*')
+          .or('winner_couple_id.eq.' + couple.id + ',loser_couple_id.eq.' + couple.id)
+          .order('created_at', { ascending: false }).limit(100));
+      }
+      var out = await Promise.all(jobs);
+      board = out[0];
+      if (out[1]) {
+        if (out[1].error) throw out[1].error;
+        matches = out[1].data || [];
+      }
+      var otherIds = matches.map(function (m) { return m.winner_couple_id === couple.id ? m.loser_couple_id : m.winner_couple_id; });
+      couplesById = await AB.loadCouplesById(otherIds);
+    } catch (err) { return fatal(err); }
+
+    render();
+  }
+
+  /* ---------------- rendering ---------------- */
+
+  function submittedByUs(m) { return m.submitted_by === uid || (partner && m.submitted_by === partner.id); }
+  function weWon(m) { return couple && m.winner_couple_id === couple.id; }
+  function opponentOf(m) {
+    var id = weWon(m) ? m.loser_couple_id : m.winner_couple_id;
+    return couplesById[id] || { couple_name: 'Unknown couple', elo: 1200 };
+  }
+
+  function render() {
+    renderStats();
+    renderCouple();
+    renderLog();
+    renderPending();
+    renderHistory();
+  }
+
+  function renderStats() {
+    var active = couple && couple.status === 'active';
+    $('statElo').textContent = active ? AB.fmtNum(couple.elo) : '—';
+    $('statEloSub').textContent = active ? 'Starting rating is 1,200' : 'Link up to start at 1,200';
+    $('statRecord').textContent = active ? AB.fmtNum(couple.wins) + '–' + AB.fmtNum(couple.losses) : '—';
+    $('statRecordSub').textContent = active ? 'Wins – losses, confirmed only' : 'Confirmed matches';
+    var rank = active ? board.findIndex(function (c) { return c.id === couple.id; }) : -1;
+    $('statRank').textContent = rank >= 0 ? '#' + (rank + 1) : '—';
+    $('statRankSub').textContent = rank >= 0 ? 'of ' + AB.fmtNum(board.length) + ' couples' : 'Across all couples';
+  }
+
+  function renderCouple() {
+    var card = $('coupleCard');
+    var html = '<div class="card-title"><h2>Your couple</h2></div>';
+
+    if (!couple) {
+      html +=
+        '<p class="muted" style="font-size:15px;margin-bottom:18px;">You haven\'t linked up with a partner yet. They need an account first, then invite them by username.</p>' +
+        '<div id="inviteMsg" class="msg hidden"></div>' +
+        '<form id="inviteForm" class="inline-form">' +
+          '<input type="text" id="partnerUsername" placeholder="partner_username" autocomplete="off" spellcheck="false" aria-label="Partner username"/>' +
+          '<button class="btn" type="submit">Send invite</button>' +
+        '</form>';
+    } else if (couple.status === 'pending' && couple.player1_id === uid) {
+      html +=
+        '<div class="couple-name">' + esc(couple.couple_name) + '</div>' +
+        '<div class="couple-sub">Invite sent to <b>@' + esc(partner ? partner.username : '…') + '</b>. They\'ll see it on their dashboard and can accept there.</div>' +
+        '<div id="inviteMsg" class="msg hidden" style="margin-top:16px;"></div>' +
+        '<div class="actions"><button class="btn btn-ghost btn-sm" data-action="cancel-invite" data-id="' + esc(couple.id) + '" type="button">Cancel invite</button></div>';
+    } else if (couple.status === 'pending') {
+      html +=
+        '<div class="couple-name">@' + esc(partner ? partner.username : '…') + ' wants to team up</div>' +
+        '<div class="couple-sub">Accept to become <b>' + esc(couple.couple_name) + '</b> and start at 1,200 ELO.</div>' +
+        '<div id="inviteMsg" class="msg hidden" style="margin-top:16px;"></div>' +
+        '<div class="actions">' +
+          '<button class="btn btn-sm" data-action="accept-invite" data-id="' + esc(couple.id) + '" type="button">Accept</button>' +
+          '<button class="btn btn-ghost btn-sm" data-action="decline-invite" data-id="' + esc(couple.id) + '" type="button">Decline</button>' +
+        '</div>';
+    } else {
+      html +=
+        '<div class="couple-name">' + esc(couple.couple_name) + '</div>' +
+        '<div class="couple-sub">You &amp; <b>@' + esc(partner ? partner.username : '…') + '</b> · together since ' + esc(AB.fmtDate(couple.created_at)) + '</div>' +
+        '<div class="couple-sub">ELO <b>' + AB.fmtNum(couple.elo) + '</b> · ' + AB.fmtNum(couple.wins) + ' wins · ' + AB.fmtNum(couple.losses) + ' losses</div>' +
+        '<div id="inviteMsg" class="msg hidden" style="margin-top:16px;"></div>' +
+        '<div class="actions"><button class="btn-link" data-action="leave-couple" data-id="' + esc(couple.id) + '" type="button">Leave couple</button></div>';
+    }
+    card.innerHTML = html;
+
+    var form = $('inviteForm');
+    if (form) form.addEventListener('submit', onInvite);
+  }
+
+  function renderLog() {
+    var body = $('logBody');
+    if (!couple || couple.status !== 'active') {
+      body.innerHTML = '<div class="msg msg-info" style="margin:0">' +
+        (couple ? 'Once your partner accepts the invite you can log matches here.' : 'Link up with your partner first. Matches are logged as a couple.') +
+        '</div>';
+      return;
+    }
+    var options = AB.GAMES.map(function (g) {
+      return '<option value="' + esc(g.name) + '">' + esc(g.icon + ' ' + g.name) + '</option>';
+    }).join('');
+    body.innerHTML =
+      '<div id="logMsg" class="msg hidden"></div>' +
+      '<form id="logForm" novalidate>' +
+        '<div class="field"><label for="matchCategory">Game</label>' +
+          '<select id="matchCategory" required><option value="">Select a game…</option>' + options + '</select></div>' +
+        '<div class="field"><label for="opponentUsername">Opponent (either partner\'s username)</label>' +
+          '<input type="text" id="opponentUsername" placeholder="their_username" autocomplete="off" spellcheck="false" required/></div>' +
+        '<div class="field"><label for="matchResult">Result</label>' +
+          '<select id="matchResult"><option value="win">We won 🏆</option><option value="loss">We lost</option></select></div>' +
+        '<button class="btn btn-block" id="logBtn" type="submit">Submit for confirmation</button>' +
+      '</form>';
+    $('logForm').addEventListener('submit', onLogMatch);
+  }
+
+  function renderPending() {
+    var card = $('pendingCard');
+    var incoming = matches.filter(function (m) { return m.status === 'pending' && !submittedByUs(m); });
+    if (!couple || couple.status !== 'active' || !incoming.length) { card.classList.add('hidden'); return; }
+    card.classList.remove('hidden');
+    $('pendingCount').textContent = incoming.length;
+
+    $('pendingBody').innerHTML = incoming.map(function (m) {
+      var opp = opponentOf(m);
+      var won = weWon(m);
+      var delta = won ? AB.eloDelta(couple.elo, opp.elo) : AB.eloDelta(opp.elo, couple.elo);
+      var claim = won
+        ? '<b>' + esc(opp.couple_name) + '</b> say you beat them at ' + esc(m.category)
+        : '<b>' + esc(opp.couple_name) + '</b> say they beat you at ' + esc(m.category);
+      return '<div class="match">' +
+        '<div class="match-main">' +
+          '<div class="match-title">' + esc(AB.gameIcon(m.category)) + ' ' + claim + '</div>' +
+          '<div class="match-meta">' + esc(AB.fmtDate(m.created_at)) + ' · if confirmed: ' +
+            '<span class="' + (won ? 'delta-up' : 'delta-down') + '">' + (won ? '+' : '−') + delta + ' ELO</span></div>' +
+        '</div>' +
+        '<div class="match-side">' +
+          '<button class="btn btn-sm" data-action="confirm-match" data-id="' + esc(m.id) + '" type="button">Confirm</button>' +
+          '<button class="btn btn-ghost btn-sm" data-action="reject-match" data-id="' + esc(m.id) + '" type="button">Reject</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderHistory() {
+    var body = $('historyBody');
+    var hint = $('historyHint');
+    if (!couple || couple.status !== 'active') {
+      hint.textContent = '';
+      body.innerHTML = '<div class="empty">Your matches will show up here once you\'ve linked up.</div>';
+      return;
+    }
+    if (!matches.length) {
+      hint.textContent = '';
+      body.innerHTML = '<div class="empty">No matches yet. Play something and log your first result.</div>';
+      return;
+    }
+    hint.textContent = 'Last ' + matches.length + (matches.length === 100 ? '+' : '') + ' matches';
+
+    body.innerHTML = matches.map(function (m) {
+      var opp = opponentOf(m);
+      var won = weWon(m);
+      var mine = submittedByUs(m);
+      var pill, side = '';
+      if (m.status === 'confirmed') {
+        pill = won ? '<span class="pill pill-win">Win</span>' : '<span class="pill pill-loss">Loss</span>';
+        if (m.elo_delta != null) side += '<span class="delta ' + (won ? 'delta-up' : 'delta-down') + '">' + (won ? '+' : '−') + m.elo_delta + '</span>';
+      } else if (m.status === 'rejected') {
+        pill = '<span class="pill pill-rejected">Rejected</span>';
+      } else {
+        pill = '<span class="pill pill-pending">' + (mine ? 'Awaiting them' : 'Awaiting you') + '</span>';
+        if (mine) side += '<button class="btn-link" data-action="reject-match" data-id="' + esc(m.id) + '" type="button">Cancel</button>';
+      }
+      var meta = esc(AB.fmtDate(m.created_at)) + ' · logged by ' + (mine ? 'your couple' : 'them');
+      if (m.status === 'confirmed' && m.winner_elo_before != null && m.loser_elo_before != null) {
+        var before = won ? m.winner_elo_before : m.loser_elo_before;
+        var after = before + (won ? m.elo_delta : -m.elo_delta);
+        meta += ' · ' + AB.fmtNum(before) + ' → ' + AB.fmtNum(after);
+      }
+      return '<div class="match">' +
+        '<div class="match-main">' +
+          '<div class="match-title">' + esc(AB.gameIcon(m.category)) + ' ' + esc(m.category) + ' <span class="vs">vs</span> ' + esc(opp.couple_name) + '</div>' +
+          '<div class="match-meta">' + meta + '</div>' +
+        '</div>' +
+        '<div class="match-side">' + side + pill + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ---------------- actions ---------------- */
+
+  async function rpc(name, args, msgId) {
+    var res = await db.rpc(name, args);
+    if (res.error) {
+      AB.showMsg(msgId || 'pageMsg', AB.friendlyError(res.error), 'error', true);
+      return null;
+    }
+    return res.data == null ? true : res.data; // void RPCs return no body
+  }
+
+  async function onInvite(e) {
+    e.preventDefault();
+    var input = $('partnerUsername');
+    var username = input.value.trim().toLowerCase();
+    if (!username) return AB.showMsg('inviteMsg', 'Enter your partner\'s username.', 'error');
+    var btn = e.target.querySelector('button');
+    btn.disabled = true;
+    var ok = await rpc('invite_partner', { partner_username: username }, 'inviteMsg');
+    btn.disabled = false;
+    if (ok) {
+      await loadAll();
+      AB.showMsg('inviteMsg', 'Invite sent to @' + username + '. Ask them to accept it on their dashboard.', 'success');
+    }
+  }
+
+  async function onLogMatch(e) {
+    e.preventDefault();
+    var category = $('matchCategory').value;
+    var opponent = $('opponentUsername').value.trim().toLowerCase();
+    var weWonIt = $('matchResult').value === 'win';
+    if (!category) return AB.showMsg('logMsg', 'Pick a game.', 'error');
+    if (!opponent) return AB.showMsg('logMsg', 'Enter the opponent\'s username.', 'error');
+
+    var btn = $('logBtn');
+    btn.disabled = true; btn.textContent = 'Submitting…';
+    var ok = await rpc('log_match', { opponent_username: opponent, category: category, we_won: weWonIt }, 'logMsg');
+    if (!ok) { btn.disabled = false; btn.textContent = 'Submit for confirmation'; return; }
+    await loadAll();
+    AB.showMsg('logMsg', 'Logged. ELO updates once @' + opponent + '\'s couple confirms it.', 'success');
+  }
+
+  document.querySelector('main').addEventListener('click', async function (e) {
+    var btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    var action = btn.dataset.action, id = btn.dataset.id;
+    var ok;
+    btn.disabled = true;
+
+    switch (action) {
+      case 'cancel-invite':
+        ok = await rpc('leave_couple', { couple_id: id }, 'inviteMsg');
+        if (ok) { await loadAll(); AB.showMsg('inviteMsg', 'Invite cancelled.', 'info'); }
+        break;
+      case 'accept-invite':
+        ok = await rpc('respond_to_invite', { couple_id: id, accept: true }, 'inviteMsg');
+        if (ok) { await loadAll(); AB.showMsg('inviteMsg', 'You\'re a couple. Go log a match!', 'success'); }
+        break;
+      case 'decline-invite':
+        ok = await rpc('respond_to_invite', { couple_id: id, accept: false }, 'inviteMsg');
+        if (ok) { await loadAll(); AB.showMsg('inviteMsg', 'Invite declined.', 'info'); }
+        break;
+      case 'leave-couple':
+        if (!window.confirm('Leave this couple? Your match history stays, but you will both need to link up again to play.')) { btn.disabled = false; return; }
+        ok = await rpc('leave_couple', { couple_id: id }, 'inviteMsg');
+        if (ok) { await loadAll(); AB.showMsg('inviteMsg', 'You left the couple.', 'info'); }
+        break;
+      case 'confirm-match':
+        ok = await rpc('confirm_match', { match_id: id }, 'pendingMsg');
+        if (ok) {
+          var wonIt = ok.winner_couple_id === couple.id;
+          await loadAll();
+          AB.showMsg('pageMsg', 'Confirmed. ' + (wonIt ? '+' : '−') + ok.elo_delta + ' ELO for your couple.', wonIt ? 'success' : 'info');
+        }
+        break;
+      case 'reject-match':
+        ok = await rpc('reject_match', { match_id: id }, 'pageMsg');
+        if (ok) { await loadAll(); AB.showMsg('pageMsg', 'Match rejected. No ELO changed.', 'info'); }
+        break;
+    }
+    btn.disabled = false;
+  });
+
+  loadAll();
+})();
+</script>
+</body>
+</html>
