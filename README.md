@@ -1,74 +1,91 @@
-# Aces & Babes
+# V Kedar's Command Center
 
-A couples ELO platform. Two people link accounts to form a couple, log matches
-against other couples across ten game categories, and climb a shared
-leaderboard. ELO only moves when the opposing couple confirms a result.
+A video archive of everything V Kedar has been making, in the order it
+happened. Static HTML, no build step, no backend. The videos live on
+YouTube; this site is the catalogue and player.
 
-Static HTML + vanilla JS on the front end, [Supabase](https://supabase.com)
-(Postgres + Auth) on the back end. No build step.
+Live at **acesandbabes.com** once the DNS steps below are done.
 
 ## Files
 
 | Path | What it is |
 | --- | --- |
-| `index.html` | Landing page with live leaderboard and stats |
-| `signup.html` | Create an account (username, email, password) |
-| `login.html` | Sign in |
-| `dashboard.html` | Invite/accept a partner, log matches, confirm results, see history |
-| `assets/styles.css` | Shared stylesheet |
-| `assets/app.js` | Supabase client, helpers, shared queries |
-| `supabase/schema.sql` | Tables, Row Level Security, triggers, and the RPC functions the app calls |
+| `videos/videos.js` | **The video list. The only file you edit day to day.** |
+| `index.html` | The page: stats, search, filters, library grid, evolution timeline, player |
+| `assets/app.js` | Page logic. Reads `videos/videos.js`, no network calls of its own |
+| `assets/styles.css` | Stylesheet |
+| `CNAME` | Tells GitHub Pages the custom domain |
+| `.nojekyll` | Tells GitHub Pages to serve files as-is |
 
-## Setup
+## Adding a video
 
-1. **Run the schema.** Open your Supabase project → SQL Editor, paste the whole
-   of `supabase/schema.sql`, and run it. It is safe to run more than once and
-   safe to run on the existing project: it adds missing columns, replaces the
-   functions, and rewrites the policies.
+1. Upload it to YouTube. Unlisted is fine; the site can still embed it.
+2. Open `videos/videos.js` on GitHub and click the pencil icon.
+3. Add an entry inside the `videos: [ ... ]` list:
 
-2. **Check the key.** `assets/app.js` holds the project URL and the public
-   (anon / publishable) key. That key is meant to be in the browser; Row Level
-   Security protects the data. If sign-in fails with an API-key error, copy
-   the current key from Supabase → Project Settings → API and paste it in.
+```js
+{
+  title: "Second pass with voiceover",
+  youtube: "https://youtube.com/shorts/XXXXXXXXXXX",
+  date: "2026-06-14",
+  project: "YouTube Shorts video generation",
+  tags: ["shorts", "voice"],
+  notes: "Added narration. First one that felt finished.",
+},
+```
 
-3. **Set the site URL.** Supabase → Authentication → URL Configuration. Set
-   *Site URL* to where the site is hosted so confirmation links land on it.
-   If *Confirm email* is on, new players get an email and must click it
-   before logging in. The signup page handles both modes.
+4. Commit. GitHub Pages republishes within about a minute.
 
-4. **Host the files.** Any static host works (GitHub Pages, Netlify, Vercel,
-   Cloudflare Pages). All links are relative, so the site can live at a
-   domain root or in a sub-folder. Filenames are lowercase; hosts are
-   case-sensitive.
+Any YouTube link works: `youtube.com/watch?v=`, `youtu.be/`, `youtube.com/shorts/`,
+or just the 11-character id. `project`, `tags`, and `notes` are optional but
+the filters and the timeline are better with them. Shorts are vertical by
+default; add `aspect: "16:9"` to a landscape video. Set `defaultAspect` at
+the top of the file if most videos are landscape.
 
-## How the game loop works
+Instead of `youtube` an entry can use `drive: "<Google Drive link>"` for a
+file shared as "anyone with the link", or `file: "videos/clip.mp4"` for a
+small mp4 committed to the repo (keep those under 100 MB each).
 
-1. Both partners sign up. A profile row is created automatically.
-2. One partner enters the other's username on the dashboard → a *pending*
-   couple. The other partner sees the invite and accepts. Couple starts at
-   1200 ELO.
-3. Either partner logs a match: game, an opponent's username, won or lost.
-   The match is *pending*.
-4. Either member of the opposing couple confirms or rejects it on their
-   dashboard. On confirm, `confirm_match()` in Postgres applies standard ELO
-   (K = 32) to both couples in one transaction and records the delta.
-5. The leaderboard ranks active couples by ELO.
+Entries with no playable link are hidden and the page says which ones.
 
-All writes to `couples` and `matches` go through `security definer` RPC
-functions, so nobody can set their own ELO from the browser.
+## Deploying: GitHub Pages plus the GoDaddy domain
 
-## Local development
+The domain is registered at GoDaddy. The site is served free by GitHub
+Pages. GoDaddy only needs to point the domain at GitHub.
 
-Serve the folder with any static server and open `index.html`:
+**On GitHub (once):**
+1. Merge this branch into `main`.
+2. Repo → Settings → Pages → *Build and deployment* → Source: **Deploy from a branch** → Branch: `main`, folder `/ (root)` → Save.
+3. On the same page, under *Custom domain*, enter `acesandbabes.com` and Save.
+   The `CNAME` file in the repo already matches.
+4. After DNS has propagated (minutes to a few hours), tick **Enforce HTTPS**.
+
+**On GoDaddy (once):** Domain → DNS → Manage DNS. Remove any existing `A`
+record for `@` and any "Parked" or website-builder forwarding, then add:
+
+| Type | Name | Value |
+| --- | --- | --- |
+| A | @ | 185.199.108.153 |
+| A | @ | 185.199.109.153 |
+| A | @ | 185.199.110.153 |
+| A | @ | 185.199.111.153 |
+| CNAME | www | vikramkedar4.github.io |
+
+Do not publish the GoDaddy website-builder site; it would compete with
+the domain. The free GoDaddy plan is enough because nothing is hosted
+there.
+
+## Local preview
 
 ```
 python3 -m http.server 8080
 ```
+Then open http://localhost:8080. Double-clicking `index.html` also works,
+since the video list is plain JavaScript rather than a fetched file.
 
-The pages load supabase-js from jsDelivr, so you need internet access.
+## Ideas not built yet
 
-## Not done yet
-
-- Password reset (needs a reset page wired to Supabase's recovery redirect)
-- Per-game ELO; today one rating covers all categories
-- Public couple profile pages
+- Pull the list from a YouTube playlist automatically (needs a YouTube Data
+  API key restricted to this domain).
+- An "add video" form behind a login, so entries can be added from a phone.
+- Sections beyond video: links, notes, other published pages.

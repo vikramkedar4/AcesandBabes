@@ -3,192 +3,113 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Aces & Babes — Couples ELO Rankings</title>
-<meta name="description" content="Compete as a couple across tennis, bowling, chess, pickleball and more. Every win raises your shared ELO. Climb the leaderboard together."/>
+<title>V Kedar's Command Center</title>
+<meta name="description" content="A video archive of everything V Kedar has been making, in the order it happened."/>
+<meta name="robots" content="noindex"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="assets/styles.css"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/app.js"></script>
 </head>
 <body>
 
-<nav class="nav">
-  <a class="logo" href="index.html">Aces <span>&</span> Babes</a>
-  <div class="nav-links">
-    <a href="#how">How it works</a>
-    <a href="#games">Games</a>
-    <a href="#leaderboard">Leaderboard</a>
-    <a href="login.html" data-anon>Log in</a>
-    <a href="signup.html" class="btn" data-anon>Sign up</a>
-    <a href="dashboard.html" class="btn hidden" data-authed>Dashboard</a>
+<header class="top">
+  <a class="brand" href="./">
+    <span class="monogram">VK</span>
+    <span class="brand-name">Command <em>Center</em></span>
+  </a>
+  <div class="seg" role="tablist" aria-label="View">
+    <button type="button" data-view="grid" class="on">Library</button>
+    <button type="button" data-view="timeline">Evolution</button>
   </div>
-</nav>
+</header>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="eyebrow">The couples ELO platform</div>
-  <h1 class="h-display">Play together.</h1>
-  <h1 class="h-display gold-line">Rank together.</h1>
-  <p>Compete across tennis, bowling, chess, pickleball and more. Every match you win as a couple raises your shared ELO rating. Climb the leaderboard.</p>
-  <div class="hero-cta">
-    <a href="signup.html" class="btn" data-anon>Create your couple</a>
-    <a href="dashboard.html" class="btn hidden" data-authed>Go to your dashboard</a>
-    <a href="#leaderboard" class="btn btn-ghost">See the rankings</a>
-  </div>
-  <p class="hero-note">Free to play. Both partners sign up, then link accounts.</p>
-</section>
+<main class="wrap">
+  <section class="hero">
+    <div class="eyebrow" id="ownerLine">V Kedar's</div>
+    <h1>Command <em>Center</em></h1>
+    <p class="tagline" id="tagline">Every video, in the order it happened.</p>
 
-<!-- TICKER -->
-<div class="ticker" aria-hidden="true">
-  <div class="ticker-inner">
-    <span>🎾 Tennis ·</span><span>♟️ Chess ·</span><span>🎳 Bowling ·</span><span>🏓 Ping Pong ·</span><span>🃏 Cards ·</span><span>⛳ Golf ·</span><span>🎯 Darts ·</span><span>🏐 Pickleball ·</span><span>🧩 Board Games ·</span><span>🎮 Video Games ·</span>
-    <span>🎾 Tennis ·</span><span>♟️ Chess ·</span><span>🎳 Bowling ·</span><span>🏓 Ping Pong ·</span><span>🃏 Cards ·</span><span>⛳ Golf ·</span><span>🎯 Darts ·</span><span>🏐 Pickleball ·</span><span>🧩 Board Games ·</span><span>🎮 Video Games ·</span>
-  </div>
-</div>
-
-<!-- LIVE STATS -->
-<div class="landing-stats stat-grid">
-  <div class="stat"><div class="stat-value" id="statCouples" data-count>—</div><div class="stat-label">Couples ranked</div></div>
-  <div class="stat"><div class="stat-value" id="statMatches" data-count>—</div><div class="stat-label">Matches confirmed</div></div>
-  <div class="stat"><div class="stat-value" data-count data-target="10">0</div><div class="stat-label">Game categories</div></div>
-</div>
-
-<!-- HOW IT WORKS -->
-<section class="section" id="how">
-  <div class="container">
-    <div class="section-head">
-      <div class="eyebrow">How it works</div>
-      <h2 class="h-section">Three steps to glory</h2>
-    </div>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">01</div>
-        <div class="rule"></div>
-        <h3>Form your couple</h3>
-        <p>Each partner creates an account. One of you sends an invite by username, the other accepts. Your couple starts at 1200 ELO.</p>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Videos</div>
+        <div class="stat-value" id="statCount">0</div>
+        <div class="stat-sub" id="statCountSub">in the archive</div>
       </div>
-      <div class="step">
-        <div class="step-num">02</div>
-        <div class="rule"></div>
-        <h3>Log your matches</h3>
-        <p>Play another couple at any game. Log the result. Nothing changes until the other couple confirms it, so there are no disputed wins.</p>
+      <div class="stat">
+        <div class="stat-label">First</div>
+        <div class="stat-value" id="statFirst">—</div>
+        <div class="stat-sub" id="statFirstSub"></div>
       </div>
-      <div class="step">
-        <div class="step-num">03</div>
-        <div class="rule"></div>
-        <h3>Climb the ranks</h3>
-        <p>Beat higher-rated couples to gain more ELO. Lose to lower-rated ones and pay for it. See where you stand on the global leaderboard.</p>
+      <div class="stat">
+        <div class="stat-label">Latest</div>
+        <div class="stat-value" id="statLatest">—</div>
+        <div class="stat-sub" id="statLatestSub"></div>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- GAMES -->
-<div class="band" id="games">
-  <section class="section">
-    <div class="container">
-      <div class="section-head">
-        <div class="eyebrow">Game categories</div>
-        <h2 class="h-section">Your arena awaits</h2>
-      </div>
-      <div class="cats">
-        <div class="cat"><div class="cat-icon">🎾</div><div class="cat-name">Tennis Doubles</div><div class="cat-desc">Serve & volley together</div></div>
-        <div class="cat"><div class="cat-icon">🎳</div><div class="cat-name">Bowling</div><div class="cat-desc">Strike as one</div></div>
-        <div class="cat"><div class="cat-icon">♟️</div><div class="cat-name">Chess</div><div class="cat-desc">Think two moves ahead</div></div>
-        <div class="cat"><div class="cat-icon">🏓</div><div class="cat-name">Ping Pong</div><div class="cat-desc">Rally your way up</div></div>
-        <div class="cat"><div class="cat-icon">🃏</div><div class="cat-name">Card Games</div><div class="cat-desc">Bluff, bid & win</div></div>
-        <div class="cat"><div class="cat-icon">🎯</div><div class="cat-name">Darts</div><div class="cat-desc">Bullseye together</div></div>
-        <div class="cat"><div class="cat-icon">⛳</div><div class="cat-name">Golf</div><div class="cat-desc">Play the long game</div></div>
-        <div class="cat"><div class="cat-icon">🧩</div><div class="cat-name">Board Games</div><div class="cat-desc">Strategy + chemistry</div></div>
-        <div class="cat"><div class="cat-icon">🏐</div><div class="cat-name">Pickleball</div><div class="cat-desc">The fastest growing rivalry</div></div>
-        <div class="cat"><div class="cat-icon">🎮</div><div class="cat-name">Video Games</div><div class="cat-desc">Co-op or 1v1</div></div>
+      <div class="stat">
+        <div class="stat-label">Projects</div>
+        <div class="stat-value" id="statProjects">0</div>
+        <div class="stat-sub" id="statProjectsSub">projects</div>
       </div>
     </div>
   </section>
-</div>
 
-<!-- LEADERBOARD -->
-<section class="section" id="leaderboard">
-  <div class="container">
-    <div class="section-head">
-      <div class="eyebrow">Global leaderboard</div>
-      <h2 class="h-section">Who's on top?</h2>
+  <section class="controls" id="controls">
+    <div class="toolbar">
+      <input class="search" id="q" type="search" placeholder="Search titles, notes, projects, tags" aria-label="Search videos" autocomplete="off"/>
+      <div class="right">
+        <span class="result-count" id="resultCount"></span>
+        <div class="seg" aria-label="Sort">
+          <button type="button" data-sort="newest" class="on">Newest</button>
+          <button type="button" data-sort="oldest">Oldest</button>
+        </div>
+      </div>
     </div>
-    <div class="lb" style="max-width:860px;margin:0 auto;">
-      <div class="lb-head"><span>Rank</span><span>Couple</span><span style="text-align:right">ELO</span><span style="text-align:right">Record</span></div>
-      <div id="lbBody"><div class="lb-empty">Loading rankings…</div></div>
-    </div>
-    <p class="lb-note" id="lbNote">Top 10 by ELO · <a href="login.html" data-anon>Log in</a><a href="dashboard.html" class="hidden" data-authed>Open your dashboard</a> to see where you stand</p>
-  </div>
-</section>
+    <div class="chips hidden" id="projectChips"></div>
+    <div class="chips hidden" id="tagChips"></div>
+  </section>
 
-<!-- CTA -->
-<div class="cta">
-  <div class="eyebrow">Ready to compete?</div>
-  <h2>Find out if you two are actually the best couple.</h2>
-  <div class="hero-cta">
-    <a href="signup.html" class="btn" data-anon>Create your couple</a>
-    <a href="login.html" class="btn btn-ghost" data-anon>Log in</a>
-    <a href="dashboard.html" class="btn hidden" data-authed>Go to your dashboard</a>
+  <div class="notice hidden" id="notice" role="status"></div>
+
+  <section id="content" aria-live="polite"></section>
+
+  <details class="help">
+    <summary>How to add a video</summary>
+    <ol>
+      <li>Upload the video to YouTube (unlisted is fine) and copy its link.</li>
+      <li>Open <code>videos/videos.js</code> in the GitHub repo and click the pencil to edit.</li>
+      <li>Copy the example entry, remove the <code>//</code> at the start of each line, and fill in the title, link, date, and project.</li>
+      <li>Commit. The site updates itself within a minute.</li>
+    </ol>
+  </details>
+</main>
+
+<div class="player" id="player" hidden role="dialog" aria-modal="true" aria-labelledby="playerTitle">
+  <div class="player-backdrop" data-close></div>
+  <div class="player-box h" id="playerBox">
+    <button class="player-close" id="playerClose" data-close type="button" aria-label="Close">×</button>
+    <div class="player-stage" id="playerStage"></div>
+    <div class="player-info">
+      <div class="player-meta" id="playerMeta"></div>
+      <h2 id="playerTitle"></h2>
+      <p class="player-notes" id="playerNotes"></p>
+      <div class="player-tags" id="playerTags"></div>
+      <div class="player-actions">
+        <a class="btn btn-ghost" id="playerLink" href="#" target="_blank" rel="noopener">Open on YouTube ↗</a>
+        <span class="spacer"></span>
+        <button class="btn btn-ghost" id="playerPrev" type="button">← Prev</button>
+        <button class="btn btn-ghost" id="playerNext" type="button">Next →</button>
+      </div>
+    </div>
   </div>
 </div>
 
 <footer class="footer">
-  <a class="logo" href="index.html">Aces <span>&</span> Babes</a>
-  <div class="fine">acesandbabes.com · © 2026 · Free to play</div>
-  <div class="footer-links">
-    <a href="#how">How it works</a>
-    <a href="#leaderboard">Leaderboard</a>
-    <a href="login.html" data-anon>Log in</a>
-    <a href="dashboard.html" class="hidden" data-authed>Dashboard</a>
-  </div>
+  <span>V Kedar's Command Center</span>
+  <span>acesandbabes.com · © <span id="year"></span></span>
 </footer>
 
-<script>
-(function () {
-  function animateCount(el, target) {
-    target = Number(target) || 0;
-    var duration = 1600, start = null;
-    function tick(ts) {
-      if (!start) start = ts;
-      var p = Math.min((ts - start) / duration, 1);
-      var ease = 1 - Math.pow(1 - p, 3);
-      el.textContent = Math.floor(ease * target).toLocaleString();
-      if (p < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-  }
-
-  // Static counters animate when scrolled into view.
-  var io = new IntersectionObserver(function (entries) {
-    entries.forEach(function (e) {
-      if (!e.isIntersecting) return;
-      if (e.target.dataset.target != null) animateCount(e.target, e.target.dataset.target);
-      io.unobserve(e.target);
-    });
-  });
-  document.querySelectorAll('[data-count][data-target]').forEach(function (el) { io.observe(el); });
-
-  if (!window.AB) return; // supabase-js failed to load; static content still works
-
-  AB.paintNavAuth();
-
-  AB.loadLeaderboard(10).then(function (rows) {
-    AB.$('lbBody').innerHTML = AB.renderLeaderboardRows(rows, null);
-  }).catch(function (err) {
-    AB.$('lbBody').innerHTML = '<div class="lb-empty">' + AB.esc(AB.friendlyError(err)) + '</div>';
-  });
-
-  Promise.all([
-    AB.db.from('couples').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-    AB.db.from('matches').select('id', { count: 'exact', head: true }).eq('status', 'confirmed')
-  ]).then(function (res) {
-    if (!res[0].error) animateCount(AB.$('statCouples'), res[0].count);
-    if (!res[1].error) animateCount(AB.$('statMatches'), res[1].count);
-  }).catch(function () { /* leave the dashes */ });
-})();
-</script>
+<script src="videos/videos.js"></script>
+<script src="assets/app.js"></script>
 </body>
 </html>
