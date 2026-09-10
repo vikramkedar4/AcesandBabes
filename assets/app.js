@@ -41,6 +41,17 @@
     return isNaN(d.getTime()) ? null : d;
   }
   function fmtDate(d) { return d ? MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getDate() + ', ' + d.getFullYear() : 'Undated'; }
+  function fmtDur(s) {
+    if (!s || s <= 0) return '';
+    s = Math.round(s);
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(sec).padStart(2, '0');
+  }
+  function fmtMinutes(s) {
+    if (!s) return '';
+    var m = Math.round(s / 60);
+    return m < 1 ? Math.round(s) + ' sec' : m < 90 ? m + ' min' : (s / 3600).toFixed(1) + ' hours';
+  }
   function fmtShort(d) { return d ? MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getDate() : 'Undated'; }
   function monthKey(d) { return d ? d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') : '0000-00'; }
   function monthLabel(d) { return d ? MONTHS[d.getMonth()] + ' ' + d.getFullYear() : 'Undated'; }
@@ -51,19 +62,24 @@
     var dr = !yt && raw.drive ? driveId(raw.drive) : null;
     var file = !yt && !dr && raw.file ? String(raw.file) : null;
     var kind = yt ? 'youtube' : dr ? 'drive' : file ? 'file' : null;
-    var key = yt || dr || file || ('entry-' + (i + 1));
+    var key = yt || dr || (file ? file.replace(/^.*\//, '').replace(/\.\w+$/, '') : '') || ('entry-' + (i + 1));
     var aspect = String(raw.aspect || cfg.defaultAspect || '16:9').replace(/\s/g, '');
+    var poster = raw.poster ? String(raw.poster) : null;
+    var seq = raw.seq != null && isFinite(Number(raw.seq)) ? Number(raw.seq) : null;
     return {
       id: key.replace(/[^\w-]/g, '_'),
       title: String(raw.title || 'Untitled'),
       kind: kind, yt: yt, dr: dr, file: file,
       date: parseDate(raw.date),
+      seq: seq,
+      duration: raw.duration != null && isFinite(Number(raw.duration)) ? Number(raw.duration) : null,
       project: String(raw.project || '').trim(),
       tags: Array.isArray(raw.tags) ? raw.tags.map(function (t) { return String(t).trim(); }).filter(Boolean) : [],
       notes: String(raw.notes || ''),
       vertical: aspect === '9:16',
+      poster: poster,
       thumb: yt ? 'https://i.ytimg.com/vi/' + yt + '/hqdefault.jpg'
-           : dr ? 'https://drive.google.com/thumbnail?id=' + dr + '&sz=w640' : null,
+           : dr ? 'https://drive.google.com/thumbnail?id=' + dr + '&sz=w640' : poster,
       link: yt ? 'https://www.youtube.com/watch?v=' + yt
           : dr ? 'https://drive.google.com/file/d/' + dr + '/view' : file,
       invalid: !kind
@@ -76,9 +92,14 @@
   var invalid = all.filter(function (v) { return v.invalid; });
   var videos = all.filter(function (v) { return !v.invalid; });
 
+  // Chronological order: by date, then by explicit seq (episode number) inside a
+  // day, then by title so the order is stable when two entries share both.
   function byDateAsc(a, b) {
     var ta = a.date ? a.date.getTime() : Infinity, tb = b.date ? b.date.getTime() : Infinity;
-    return ta - tb || a.title.localeCompare(b.title);
+    if (ta !== tb) return ta - tb;
+    var sa = a.seq != null ? a.seq : Infinity, sb = b.seq != null ? b.seq : Infinity;
+    if (sa !== sb) return sa - sb;
+    return a.title.localeCompare(b.title);
   }
   videos.slice().sort(byDateAsc).forEach(function (v, i) { v.num = i + 1; });
 
@@ -111,15 +132,16 @@
   /* ---------- rendering ---------- */
 
   function thumbHtml(v) {
-    if (v.thumb) return '<img src="' + esc(v.thumb) + '" alt="" loading="lazy">';
+    if (v.thumb) return '<img src="' + esc(v.thumb) + '" alt="" loading="lazy" decoding="async">';
     if (v.kind === 'file') return '<video src="' + esc(v.file) + '" preload="metadata" muted playsinline></video>';
     return '';
   }
+  function durHtml(v) { return v.duration ? '<span class="dur">' + fmtDur(v.duration) + '</span>' : ''; }
 
   function cardHtml(v) {
     return '<article class="card" data-id="' + esc(v.id) + '" tabindex="0" role="button" aria-label="Play ' + esc(v.title) + '">' +
       '<div class="thumb' + (v.vertical ? ' v' : '') + '">' + thumbHtml(v) +
-        '<span class="num">№ ' + v.num + '</span>' +
+        '<span class="num">№ ' + v.num + '</span>' + durHtml(v) +
         '<div class="play"><span class="play-btn">' + PLAY_SVG + '</span></div>' +
       '</div>' +
       '<div class="card-body">' +
@@ -140,7 +162,7 @@
         lastKey = key;
       }
       html += '<div class="tl-item" data-id="' + esc(v.id) + '" tabindex="0" role="button" aria-label="Play ' + esc(v.title) + '">' +
-        '<div class="tl-thumb' + (v.vertical ? ' v' : '') + '">' + thumbHtml(v) + '</div>' +
+        '<div class="tl-thumb' + (v.vertical ? ' v' : '') + '">' + thumbHtml(v) + durHtml(v) + '</div>' +
         '<div class="tl-body">' +
           '<div class="tl-date">' + esc(fmtShort(v.date)) + '</div>' +
           '<div class="tl-title">' + esc(v.title) + '</div>' +
@@ -165,8 +187,9 @@
     var dated = sorted.filter(function (v) { return v.date; });
     var first = dated[0], last = dated[dated.length - 1];
     var n = videos.length;
+    var total = videos.reduce(function (s, v) { return s + (v.duration || 0); }, 0);
     $('statCount').textContent = n ? String(n) : '0';
-    $('statCountSub').textContent = n === 1 ? 'in the archive' : 'in the archive';
+    $('statCountSub').textContent = total ? fmtMinutes(total) + ' of footage' : 'in the archive';
     $('statFirst').textContent = first ? fmtDate(first.date) : '—';
     $('statFirstSub').textContent = first ? first.title : 'Nothing dated yet';
     $('statLatest').textContent = last ? fmtDate(last.date) : '—';
@@ -189,9 +212,19 @@
     } else { pRow.innerHTML = ''; pRow.classList.add('hidden'); }
 
     if (tKeys.length) {
+      // Show the most-used tags; the rest sit behind a "+ N more" chip so a
+      // long tag list does not push the videos down the page.
+      var LIMIT = 12, shown = tKeys, hiddenCount = 0;
+      if (!state.moreTags && tKeys.length > LIMIT + 2) {
+        shown = tKeys.slice(0, LIMIT);
+        if (state.tag && shown.indexOf(state.tag) < 0) shown.push(state.tag);
+        hiddenCount = tKeys.length - shown.length;
+      }
       tRow.innerHTML = '<span class="chips-label">Tags</span>' +
         chipHtml('All', '', null, !state.tag, 'tag') +
-        tKeys.map(function (t) { return chipHtml(t, t, tags[t], state.tag === t, 'tag'); }).join('');
+        shown.map(function (t) { return chipHtml(t, t, tags[t], state.tag === t, 'tag'); }).join('') +
+        (hiddenCount ? '<button class="chip chip-more" data-more="1" type="button">+ ' + hiddenCount + ' more</button>' : '') +
+        (state.moreTags && tKeys.length > LIMIT + 2 ? '<button class="chip chip-more" data-more="0" type="button">Fewer</button>' : '');
       tRow.classList.remove('hidden');
     } else { tRow.innerHTML = ''; tRow.classList.add('hidden'); }
 
@@ -262,7 +295,8 @@
     if (v.kind === 'drive') {
       return '<iframe src="https://drive.google.com/file/d/' + v.dr + '/preview" title="' + esc(v.title) + '" allow="autoplay" allowfullscreen></iframe>';
     }
-    return '<video src="' + esc(v.file) + '" controls autoplay playsinline></video>';
+    return '<video src="' + esc(v.file) + '"' + (v.poster ? ' poster="' + esc(v.poster) + '"' : '') +
+      ' controls autoplay playsinline preload="auto"></video>';
   }
 
   function openVideo(id, fromHash) {
@@ -274,7 +308,7 @@
     var box = $('playerBox');
     box.className = 'player-box ' + (v.vertical ? 'v' : 'h');
     $('playerStage').innerHTML = stageHtml(v);
-    $('playerMeta').textContent = '№ ' + v.num + ' · ' + fmtDate(v.date) + (v.project ? ' · ' + v.project : '');
+    $('playerMeta').textContent = '№ ' + v.num + ' · ' + fmtDate(v.date) + (v.project ? ' · ' + v.project : '') + (v.duration ? ' · ' + fmtDur(v.duration) : '');
     $('playerTitle').textContent = v.title;
     $('playerNotes').textContent = v.notes;
     $('playerNotes').classList.toggle('hidden', !v.notes);
@@ -282,7 +316,7 @@
     $('playerTags').classList.toggle('hidden', !v.tags.length);
     var link = $('playerLink');
     link.href = v.link;
-    link.textContent = v.kind === 'youtube' ? 'Open on YouTube ↗' : v.kind === 'drive' ? 'Open in Drive ↗' : 'Open file ↗';
+    link.textContent = v.kind === 'youtube' ? 'Open on YouTube ↗' : v.kind === 'drive' ? 'Open in Drive ↗' : 'Open video ↗';
 
     var idx = indexInList(v);
     $('playerPrev').disabled = idx <= 0;
@@ -318,9 +352,19 @@
     if (next) openVideo(next.id);
   }
 
+  // Deep links: #v=<id> opens a video, #p=<project> applies a project filter,
+  // #t=<tag> a tag filter. They can be combined with &.
   function openFromHash() {
-    var m = location.hash.match(/^#v=([^&]+)/);
-    if (m) openVideo(decodeURIComponent(m[1]), true);
+    var h = location.hash, m;
+    if ((m = h.match(/[#&]p=([^&]+)/))) {
+      var p = decodeURIComponent(m[1]);
+      if (projects[p] && state.project !== p) { state.project = p; renderChips(); renderContent(); }
+    }
+    if ((m = h.match(/[#&]t=([^&]+)/))) {
+      var t = decodeURIComponent(m[1]);
+      if (tags[t] && state.tag !== t) { state.tag = t; renderChips(); renderContent(); }
+    }
+    if ((m = h.match(/[#&]v=([^&]+)/))) openVideo(decodeURIComponent(m[1]), true);
   }
 
   /* ---------- wiring ---------- */
@@ -338,7 +382,8 @@
     $('controls').addEventListener('click', function (e) {
       var b = e.target.closest('button');
       if (!b) return;
-      if (b.dataset.project != null) { state.project = b.dataset.project; renderChips(); renderContent(); }
+      if (b.dataset.more != null) { state.moreTags = b.dataset.more === '1'; renderChips(); }
+      else if (b.dataset.project != null) { state.project = b.dataset.project; renderChips(); renderContent(); }
       else if (b.dataset.tag != null) { state.tag = b.dataset.tag; renderChips(); renderContent(); }
       else if (b.dataset.sort) { state.sort = b.dataset.sort; save('cc-sort', state.sort); renderChips(); renderContent(); }
     });
@@ -368,7 +413,8 @@
       else if (e.key === 'ArrowRight') step(1);
     });
     window.addEventListener('hashchange', function () {
-      if (location.hash.indexOf('#v=') === 0) openFromHash(); else closePlayer();
+      if (!/[#&]v=/.test(location.hash)) closePlayer();
+      openFromHash();
     });
 
     renderAll();

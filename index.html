@@ -6,6 +6,10 @@
 <title>V Kedar's Command Center</title>
 <meta name="description" content="A video archive of everything V Kedar has been making, in the order it happened."/>
 <meta name="robots" content="noindex"/>
+<meta property="og:title" content="V Kedar's Command Center"/>
+<meta property="og:description" content="A video archive of everything V Kedar has been making, in the order it happened."/>
+<meta name="theme-color" content="#0a0a0a"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230a0a0a'/%3E%3Crect x='6' y='6' width='52' height='52' fill='none' stroke='%23d4af37' stroke-width='3'/%3E%3Ctext x='32' y='43' font-family='Georgia,serif' font-weight='700' font-size='28' fill='%23d4af37' text-anchor='middle'%3EVK%3C/text%3E%3C/svg%3E"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -76,10 +80,9 @@
   <details class="help">
     <summary>How to add a video</summary>
     <ol>
-      <li>Upload the video to YouTube (unlisted is fine) and copy its link.</li>
-      <li>Open <code>videos/videos.js</code> in the GitHub repo and click the pencil to edit.</li>
-      <li>Copy the example entry, remove the <code>//</code> at the start of each line, and fill in the title, link, date, and project.</li>
-      <li>Commit. The site updates itself within a minute.</li>
+      <li>From the Mac: <code>python3 scripts/ingest.py path/to/clip.mp4 --title "…" --project "…"</code> copies the file into <code>videos/</code>, makes a poster, and adds the entry to <code>videos/videos.js</code>. Then commit and push.</li>
+      <li>From anywhere: upload to YouTube (unlisted is fine), open <code>videos/videos.js</code> on GitHub, and add an entry with the link, a date, and a title.</li>
+      <li>Vercel republishes <code>main</code> within about a minute.</li>
     </ol>
   </details>
 </main>

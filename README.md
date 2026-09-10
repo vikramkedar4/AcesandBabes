@@ -1,87 +1,68 @@
 # V Kedar's Command Center
 
 A video archive of everything V Kedar has been making, in the order it
-happened. Static HTML, no build step, no backend. The videos live on
-YouTube; this site is the catalogue and player.
+happened. Static HTML, no build step, no backend. The videos are plain mp4
+files in this repo; the site is the catalogue and player.
 
-Live at **acesandbabes.com** once the DNS steps below are done.
+Live at **https://acesandbabes.com** (Vercel, deploys `main` automatically).
 
 ## Files
 
 | Path | What it is |
 | --- | --- |
 | `videos/videos.js` | **The video list. The only file you edit day to day.** |
+| `videos/*.mp4` | The videos, remuxed for fast start over HTTP |
+| `videos/posters/*.jpg` | One poster frame per video, shown in the grid before play |
+| `scripts/ingest.py` | Adds a video: copies it in, makes the poster, measures it, appends the entry |
 | `index.html` | The page: stats, search, filters, library grid, evolution timeline, player |
 | `assets/app.js` | Page logic. Reads `videos/videos.js`, no network calls of its own |
 | `assets/styles.css` | Stylesheet |
-| `CNAME` | Tells GitHub Pages the custom domain |
-| `.nojekyll` | Tells GitHub Pages to serve files as-is |
 
 ## Adding a video
 
-1. Upload it to YouTube. Unlisted is fine; the site can still embed it.
-2. Open `videos/videos.js` on GitHub and click the pencil icon.
-3. Add an entry inside the `videos: [ ... ]` list:
+From the Mac, in this folder:
 
-```js
-{
-  title: "Second pass with voiceover",
-  youtube: "https://youtube.com/shorts/XXXXXXXXXXX",
-  date: "2026-06-14",
-  project: "YouTube Shorts video generation",
-  tags: ["shorts", "voice"],
-  notes: "Added narration. First one that felt finished.",
-},
+```
+python3 scripts/ingest.py ~/Claude/some-project/out/clip.mp4 \
+  --title "What it is" --project "Series name" --notes "One line about it" --tags shorts,nfl
+git add videos && git commit -m "Add What it is" && git push
 ```
 
-4. Commit. GitHub Pages republishes within about a minute.
+That copies the file to `videos/`, writes `videos/posters/<name>.jpg`, measures
+duration and aspect, and inserts the entry into `videos/videos.js`. Files over
+40 MB are re-encoded at 720p (`--max-mb` changes the limit). Vercel republishes
+`main` within about a minute of the push.
 
-Any YouTube link works: `youtube.com/watch?v=`, `youtu.be/`, `youtube.com/shorts/`,
-or just the 11-character id. `project`, `tags`, and `notes` are optional but
-the filters and the timeline are better with them. Shorts are vertical by
-default; add `aspect: "16:9"` to a landscape video. Set `defaultAspect` at
-the top of the file if most videos are landscape.
+From anywhere, without the Mac: upload the video to YouTube (unlisted is fine),
+open `videos/videos.js` on GitHub, click the pencil, and add an entry with a
+`youtube:` link instead of `file:`. Any YouTube link form works, including Shorts.
+`drive:` works the same way for a Google Drive file shared as "anyone with the link".
 
-Instead of `youtube` an entry can use `drive: "<Google Drive link>"` for a
-file shared as "anyone with the link", or `file: "videos/clip.mp4"` for a
-small mp4 committed to the repo (keep those under 100 MB each).
+Entry fields: `title`, `file` or `youtube` or `drive`, `poster`, `duration`,
+`date` (`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM`), `seq` (orders entries that share a
+date, e.g. an episode number), `project`, `tags`, `notes`, `aspect` (`9:16` or
+`16:9`). Entries with no playable link are hidden and the page says which ones.
 
-Entries with no playable link are hidden and the page says which ones.
+Deep links: `#v=<id>` opens a video (the id is the file name without `.mp4`),
+`#p=Money%20Math` applies a project filter, `#t=nfl` a tag filter.
 
-## Deploying: GitHub Pages plus the GoDaddy domain
+## Hosting
 
-The domain is registered at GoDaddy. The site is served free by GitHub
-Pages. GoDaddy only needs to point the domain at GitHub.
-
-**On GitHub (once):**
-1. Merge this branch into `main`.
-2. Repo → Settings → Pages → *Build and deployment* → Source: **Deploy from a branch** → Branch: `main`, folder `/ (root)` → Save.
-3. On the same page, under *Custom domain*, enter `acesandbabes.com` and Save.
-   The `CNAME` file in the repo already matches.
-4. After DNS has propagated (minutes to a few hours), tick **Enforce HTTPS**.
-
-**On GoDaddy (once):** Domain → DNS → Manage DNS. Remove any existing `A`
-record for `@` and any "Parked" or website-builder forwarding, then add:
-
-| Type | Name | Value |
-| --- | --- | --- |
-| A | @ | 185.199.108.153 |
-| A | @ | 185.199.109.153 |
-| A | @ | 185.199.110.153 |
-| A | @ | 185.199.111.153 |
-| CNAME | www | vikramkedar4.github.io |
-
-Do not publish the GoDaddy website-builder site; it would compete with
-the domain. The free GoDaddy plan is enough because nothing is hosted
-there.
+- **Site:** Vercel project connected to this GitHub repo. Pushing to `main`
+  deploys; branches get preview URLs. Nothing to configure in the repo.
+- **Domain:** registered at GoDaddy, DNS already points at Vercel
+  (`A @ 76.76.21.21`, `www` → `acesandbabes.com`). Do not publish the GoDaddy
+  website-builder site; it would compete with the domain.
+- **GitHub Pages is not used.** If Vercel ever goes away: enable Pages from
+  `main`, add a `CNAME` file containing `acesandbabes.com`, and change the
+  GoDaddy `A` records to GitHub's four (185.199.108.153 … 111.153).
 
 ## Local preview
 
 ```
 python3 -m http.server 8080
 ```
-Then open http://localhost:8080. Double-clicking `index.html` also works,
-since the video list is plain JavaScript rather than a fetched file.
+Then open http://localhost:8080.
 
 ## Ideas not built yet
 
