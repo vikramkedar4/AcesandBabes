@@ -5,8 +5,13 @@
 A personal video archive site for V Kedar (Vikram): every video he has been
 making with Claude in other chats, catalogued in the order it happened.
 Static HTML, no build step, no backend. The videos are mp4 files committed
-to this repo (40 of them, ~205 MB, as of 2026-09-10); the site is the
-catalogue and player.
+to this repo (**71 of them, ~615 MB, 3.1 hours, 22 series, as of 2026-09-12**);
+the site is the catalogue and player.
+
+**Never ingest** `~/Claude/family-portfolio-review` — private family material.
+Also excluded on purpose: `the-leaving` and `244-days` (abandoned),
+`refusal-engine/out/demo.mp4` (scratch-ledger render, not real data), and every
+intermediate under `gen/`, `generations/`, `making/seg/`, `edit/` and `chunks/`.
 
 History: this repo began as "Aces & Babes", a couples ELO app on Supabase.
 That version is complete and tested at commit 845296a, and was replaced on
