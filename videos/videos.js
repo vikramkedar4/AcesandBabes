@@ -484,6 +484,14 @@ window.COMMAND_CENTER = {
       tags: ["film", "ai", "making of", "methodology"],
       notes: "Step by step on this production's real artefacts, built around one new device: the pair card, with the exact prompt on the left and the exact frame it produced on the right.",
     },
+    {
+      title: "High Noon",
+      file: "videos/high-noon.mp4", poster: "videos/posters/high-noon.jpg", duration: 54,
+      date: "2026-09-12T10:56",
+      project: "AI Films",
+      tags: ["film", "ai", "generated", "shorts"],
+      notes: "Four gunslingers face off in a dead frontier town, each with a matte black sphere where a head should be, each sphere carrying the mark of one of the four big models. Nobody draws. The sun goes down, the stars wheel over, the sun comes back up, and all four are still standing exactly where they were. The standoff never resolving is the joke, and it is also why the film takes no side. Nine generations, nothing reused.",
+    },
     // <<ingest: new entries are inserted above this line>>
   ],
 };
